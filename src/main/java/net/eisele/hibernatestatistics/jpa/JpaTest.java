@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -55,6 +56,8 @@ public class JpaTest {
 
     private final static Logger logger = LoggerFactory.getLogger(JpaTest.class);
 
+    private final Random random;
+
     /**
      * Public constructor
      *
@@ -62,6 +65,7 @@ public class JpaTest {
      */
     public JpaTest(EntityManager manager) {
         this.manager = manager;
+        random = new Random();
     }
 
     /**
@@ -70,13 +74,18 @@ public class JpaTest {
      * @param args
      */
     public static void main(String[] args) {
+        // Create the EntityManager to use.
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("hibernatestatistics");
         EntityManager manager = factory.createEntityManager();
         JpaTest test = new JpaTest(manager);
 
+        // register the Statistics Mbean
         registerHibernateMBeans(manager);
+
+        // initialize the Jolokia Server to expose JMX via JSON for Hawtio
         initJolokiaServer();
 
+        // Do something with the entities 
         EntityTransaction tx = manager.getTransaction();
         tx.begin();
         try {
@@ -99,20 +108,31 @@ public class JpaTest {
         manager.persist(department);
         manager.persist(department2);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 1000; i++) {
+            // assign a UUID name
             String surename = UUID.randomUUID().toString();
-            manager.persist(new Employee("Jakab " + surename, department));
-            manager.persist(new Employee("Captain " + surename, department2));
+            // assign random department
+            Department dep = random.nextBoolean() ? department : department2;
+            manager.persist(new Employee("Elena " + surename, dep));
+            manager.persist(new Employee("Paisley " + surename, dep));
         }
 
     }
 
     private void listEmployees() {
         List<Employee> resultList = manager.createQuery("Select a From Employee a", Employee.class).getResultList();
-        System.out.println("num of employess:" + resultList.size());
-        for (Employee next : resultList) {
-            logger.info("next employee: " + next);
-        }
+        logger.info("num of employees:" + resultList.size());
+
+        Department department = (Department) manager.createQuery("SELECT d FROM Department d WHERE d.name=:name")
+                .setParameter("name", "java")
+                .getSingleResult();
+
+        List<Employee> resultList2 = manager.createQuery("SELECT e FROM Employee e WHERE e.department.name=:department")
+                .setParameter("department", "java")
+                .getResultList();
+
+        logger.info("num of java employees:" + resultList2.size());
+
     }
 
     private static void registerHibernateMBeans(EntityManager manager) {
