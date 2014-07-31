@@ -174,7 +174,6 @@ public class JpaTest {
         try {
             //8778 default server port
             JolokiaServerConfig config = new JolokiaServerConfig(new HashMap<String, String>());
-
             JolokiaServer jolokiaServer = new JolokiaServer(config, true);
             jolokiaServer.start();
         } catch (IOException e) {
