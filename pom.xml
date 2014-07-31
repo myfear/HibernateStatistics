@@ -4,7 +4,14 @@
     <groupId>net.eisele</groupId>
     <artifactId>hibernatestatistics</artifactId>
     <version>1.0-SNAPSHOT</version>
-	
+    <name>Hibernate Statistics Example with Hawtio and Jolokia</name>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <distribution>repo</distribution>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+        </license>
+    </licenses>
     <dependencies>
         <!-- Derby DB -->
         <dependency>
@@ -45,4 +52,34 @@
             <version>1.2.2</version>
         </dependency>
     </dependencies>
+    
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <debug>true</debug>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.3.1</version>
+                <configuration>
+                    <mainClass>net.eisele.hibernatestatistics.jpa.JpaTest</mainClass>
+                    <systemProperties>  
+                        <property>
+                            <key>derby.stream.error.file</key>
+                            <value>target/derby.log</value>
+                        </property>
+                    </systemProperties>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
