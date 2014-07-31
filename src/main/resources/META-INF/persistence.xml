@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<persistence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+             version="2.0" xmlns="http://java.sun.com/xml/ns/persistence">
+    <persistence-unit name="hibernatestatistics" transaction-type="RESOURCE_LOCAL">
+        <class>net.eisele.hibernatestatistics.domain.Department</class>
+        <class>net.eisele.hibernatestatistics.domain.Employee</class>
+        <properties>
+            <!-- start an embedded derby and store the db files in the target folder -->
+            <property name="javax.persistence.jdbc.driver" value="org.apache.derby.jdbc.EmbeddedDriver" />
+            <property name="javax.persistence.jdbc.url" value="jdbc:derby:target/hibernatestatistics;create=true" />
+
+            <property name="hibernate.hbm2ddl.auto" value="create"/>
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="false"/>
+            <!--   Use this property if you don't enable statistics programatically 
+            <property name="hibernate.generate_statistics" value="true"/>	
+            -->
+        </properties>
+    </persistence-unit>
+</persistence>
