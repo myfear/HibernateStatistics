@@ -22,26 +22,24 @@ import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import net.eisele.hibernatestatistics.domain.Employee;
-import net.eisele.hibernatestatistics.domain.Department;
 import java.util.UUID;
+
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import net.eisele.hibernatestatistics.domain.Department;
+import net.eisele.hibernatestatistics.domain.Employee;
 
 import org.hibernate.Session;
-import org.hibernate.ejb.EntityManagerImpl;
 import org.hibernate.jmx.StatisticsService;
-
 import org.jolokia.jvmagent.JolokiaServer;
 import org.jolokia.jvmagent.JolokiaServerConfig;
 import org.slf4j.Logger;
@@ -85,7 +83,7 @@ public class JpaTest {
         // initialize the Jolokia Server to expose JMX via JSON for Hawtio
         initJolokiaServer();
 
-        // Do something with the entities 
+        // Do something with the entities
         EntityTransaction tx = manager.getTransaction();
         tx.begin();
         try {
@@ -160,14 +158,7 @@ public class JpaTest {
     }
 
     private static Session getHibernateSession(EntityManager entityManager) {
-        Session session;
-        if (entityManager.getDelegate() instanceof EntityManagerImpl) {
-            EntityManagerImpl entityManagerImpl = (EntityManagerImpl) entityManager.getDelegate();
-            session = entityManagerImpl.getSession();
-        } else {
-            session = (Session) entityManager.getDelegate();
-        }
-        return session;
+        return entityManager.unwrap( Session.class );
     }
 
     private static void initJolokiaServer() {
