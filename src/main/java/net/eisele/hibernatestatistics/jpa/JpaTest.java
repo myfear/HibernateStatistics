@@ -22,26 +22,23 @@ import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import net.eisele.hibernatestatistics.domain.Employee;
-import net.eisele.hibernatestatistics.domain.Department;
 import java.util.UUID;
+
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
 
-import org.hibernate.Session;
-import org.hibernate.ejb.EntityManagerImpl;
-import org.hibernate.jmx.StatisticsService;
+import net.eisele.hibernatestatistics.domain.Department;
+import net.eisele.hibernatestatistics.domain.Employee;
 
+import org.hibernate.SessionFactory;
 import org.jolokia.jvmagent.JolokiaServer;
 import org.jolokia.jvmagent.JolokiaServerConfig;
 import org.slf4j.Logger;
@@ -76,16 +73,17 @@ public class JpaTest {
     public static void main(String[] args) {
         // Create the EntityManager to use.
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("hibernatestatistics");
+        registerHibernateMBeans(factory);
+
         EntityManager manager = factory.createEntityManager();
         JpaTest test = new JpaTest(manager);
 
         // register the Statistics Mbean
-        registerHibernateMBeans(manager);
 
         // initialize the Jolokia Server to expose JMX via JSON for Hawtio
         initJolokiaServer();
 
-        // Do something with the entities 
+        // Do something with the entities
         EntityTransaction tx = manager.getTransaction();
         tx.begin();
         try {
@@ -96,6 +94,8 @@ public class JpaTest {
         tx.commit();
 
         test.listEmployees();
+
+        manager.close();
 
         logger.info(".. done");
     }
@@ -127,7 +127,9 @@ public class JpaTest {
                 .setParameter("name", "java")
                 .getSingleResult();
 
-        List<Employee> resultList2 = manager.createQuery("SELECT e FROM Employee e WHERE e.department.name=:department")
+        logger.info( "Department: " + department.getName() );
+
+        List<Employee> resultList2 = manager.createQuery("SELECT e FROM Employee e WHERE e.department.name=:department", Employee.class)
                 .setParameter("department", "java")
                 .getResultList();
 
@@ -135,15 +137,16 @@ public class JpaTest {
 
     }
 
-    private static void registerHibernateMBeans(EntityManager manager) {
+    private static void registerHibernateMBeans(EntityManagerFactory emf) {
+        SessionFactory sessionFactory = emf.unwrap(SessionFactory.class);
 
         try {
             MBeanServer mbeanServer
                     = ManagementFactory.getPlatformMBeanServer();
             ObjectName on
                     = new ObjectName("Hibernate:type=statistics,application=hibernatestatistics");
-            StatisticsService mBean = new StatisticsService();
-            mBean.setSessionFactory(getHibernateSession(manager).getSessionFactory());
+
+            StatisticsService mBean = new DelegatingStatisticsService(sessionFactory.getStatistics());
             mBean.setStatisticsEnabled(true); // alternative is to enable it in persistence.xml
             mbeanServer.registerMBean(mBean, on);
 
@@ -157,17 +160,6 @@ public class JpaTest {
             logger.error("", ex);
         }
 
-    }
-
-    private static Session getHibernateSession(EntityManager entityManager) {
-        Session session;
-        if (entityManager.getDelegate() instanceof EntityManagerImpl) {
-            EntityManagerImpl entityManagerImpl = (EntityManagerImpl) entityManager.getDelegate();
-            session = entityManagerImpl.getSession();
-        } else {
-            session = (Session) entityManager.getDelegate();
-        }
-        return session;
     }
 
     private static void initJolokiaServer() {
