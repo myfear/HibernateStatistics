@@ -38,7 +38,6 @@ import javax.persistence.Persistence;
 import net.eisele.hibernatestatistics.domain.Department;
 import net.eisele.hibernatestatistics.domain.Employee;
 
-import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.jolokia.jvmagent.JolokiaServer;
 import org.jolokia.jvmagent.JolokiaServerConfig;
@@ -74,11 +73,12 @@ public class JpaTest {
     public static void main(String[] args) {
         // Create the EntityManager to use.
         EntityManagerFactory factory = Persistence.createEntityManagerFactory("hibernatestatistics");
+        registerHibernateMBeans(factory);
+
         EntityManager manager = factory.createEntityManager();
         JpaTest test = new JpaTest(manager);
 
         // register the Statistics Mbean
-        registerHibernateMBeans(manager);
 
         // initialize the Jolokia Server to expose JMX via JSON for Hawtio
         initJolokiaServer();
@@ -94,6 +94,8 @@ public class JpaTest {
         tx.commit();
 
         test.listEmployees();
+
+        manager.close();
 
         logger.info(".. done");
     }
@@ -125,7 +127,9 @@ public class JpaTest {
                 .setParameter("name", "java")
                 .getSingleResult();
 
-        List<Employee> resultList2 = manager.createQuery("SELECT e FROM Employee e WHERE e.department.name=:department")
+        logger.info( "Department: " + department.getName() );
+
+        List<Employee> resultList2 = manager.createQuery("SELECT e FROM Employee e WHERE e.department.name=:department", Employee.class)
                 .setParameter("department", "java")
                 .getResultList();
 
@@ -133,14 +137,14 @@ public class JpaTest {
 
     }
 
-    private static void registerHibernateMBeans(EntityManager manager) {
+    private static void registerHibernateMBeans(EntityManagerFactory emf) {
+        SessionFactory sessionFactory = emf.unwrap(SessionFactory.class);
 
         try {
             MBeanServer mbeanServer
                     = ManagementFactory.getPlatformMBeanServer();
             ObjectName on
                     = new ObjectName("Hibernate:type=statistics,application=hibernatestatistics");
-            SessionFactory sessionFactory = getHibernateSession(manager).getSessionFactory();
 
             StatisticsService mBean = new DelegatingStatisticsService(sessionFactory.getStatistics());
             mBean.setStatisticsEnabled(true); // alternative is to enable it in persistence.xml
@@ -156,10 +160,6 @@ public class JpaTest {
             logger.error("", ex);
         }
 
-    }
-
-    private static Session getHibernateSession(EntityManager entityManager) {
-        return entityManager.unwrap( Session.class );
     }
 
     private static void initJolokiaServer() {
