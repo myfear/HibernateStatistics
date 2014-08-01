@@ -39,7 +39,7 @@ import net.eisele.hibernatestatistics.domain.Department;
 import net.eisele.hibernatestatistics.domain.Employee;
 
 import org.hibernate.Session;
-import org.hibernate.jmx.StatisticsService;
+import org.hibernate.SessionFactory;
 import org.jolokia.jvmagent.JolokiaServer;
 import org.jolokia.jvmagent.JolokiaServerConfig;
 import org.slf4j.Logger;
@@ -140,8 +140,9 @@ public class JpaTest {
                     = ManagementFactory.getPlatformMBeanServer();
             ObjectName on
                     = new ObjectName("Hibernate:type=statistics,application=hibernatestatistics");
-            StatisticsService mBean = new StatisticsService();
-            mBean.setSessionFactory(getHibernateSession(manager).getSessionFactory());
+            SessionFactory sessionFactory = getHibernateSession(manager).getSessionFactory();
+
+            StatisticsService mBean = new DelegatingStatisticsService(sessionFactory.getStatistics());
             mBean.setStatisticsEnabled(true); // alternative is to enable it in persistence.xml
             mbeanServer.registerMBean(mBean, on);
 
